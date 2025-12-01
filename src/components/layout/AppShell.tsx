@@ -1,4 +1,3 @@
-import React from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useTheme } from "../../theme/useTheme";
 import { useLanguage } from "../../i18n/useLanguage";

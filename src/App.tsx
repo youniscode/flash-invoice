@@ -1,4 +1,3 @@
-import React from "react";
 import AppRouter from "./AppRouter";
 import { ThemeProvider } from "./theme/ThemeContext";
 import { LanguageProvider } from "./i18n/LanguageContext";
