@@ -1,23 +1,35 @@
 import { useMemo, useState } from "react";
 
 type LineItem = {
+  id: string;
   description: string;
   quantity: number;
   unitPrice: number;
 };
 
+function createLine(partial?: Partial<LineItem>): LineItem {
+  return {
+    id: Math.random().toString(36).slice(2),
+    description: partial?.description ?? "",
+    quantity: partial?.quantity ?? 1,
+    unitPrice: partial?.unitPrice ?? 0,
+  };
+}
+
 export function InvoiceEditorPage() {
-  const [line, setLine] = useState<LineItem>({
-    description: "Landing page design",
-    quantity: 1,
-    unitPrice: 900,
-  });
+  const [items, setItems] = useState<LineItem[]>([
+    createLine({
+      description: "Landing page design",
+      quantity: 1,
+      unitPrice: 900,
+    }),
+  ]);
 
   const [taxRate, setTaxRate] = useState<number>(20);
 
   const subtotal = useMemo(
-    () => line.quantity * line.unitPrice,
-    [line.quantity, line.unitPrice]
+    () => items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+    [items]
   );
 
   const taxAmount = useMemo(
@@ -27,16 +39,32 @@ export function InvoiceEditorPage() {
 
   const total = subtotal + taxAmount;
 
-  const handleLineChange =
-    (field: keyof LineItem) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const updateItem =
+    (id: string, field: keyof LineItem) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       const value =
         field === "description" ? e.target.value : Number(e.target.value) || 0;
 
-      setLine((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, [field]: value } : item
+        )
+      );
     };
+
+  const addLine = () => {
+    setItems((prev) => [...prev, createLine()]);
+  };
+
+  const removeLine = (id: string) => {
+    setItems((prev) => {
+      if (prev.length === 1) {
+        // keep at least one row – just clear it
+        return [createLine()];
+      }
+      return prev.filter((item) => item.id !== id);
+    });
+  };
 
   const handleTaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
@@ -156,11 +184,17 @@ export function InvoiceEditorPage() {
           </div>
         </div>
 
-        {/* LINE ITEMS HEADER */}
+        {/* LINE ITEMS */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-[11px] text-slate-400">
             <span>Line items</span>
-            <button className="text-sky-300 hover:underline">+ Add line</button>
+            <button
+              type="button"
+              className="text-sky-300 hover:underline"
+              onClick={addLine}
+            >
+              + Add line
+            </button>
           </div>
 
           {/* Column labels */}
@@ -171,58 +205,79 @@ export function InvoiceEditorPage() {
             <span className="text-right">Total</span>
           </div>
 
-          {/* SINGLE ROW (controlled) */}
-          <div className="grid grid-cols-[2fr_repeat(3,minmax(0,1fr))] gap-2">
-            {/* Description */}
-            <div className="flex flex-col">
-              <label htmlFor="line-1-desc" className="sr-only">
-                Line 1 description
-              </label>
-              <input
-                id="line-1-desc"
-                placeholder="Description"
-                className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs"
-                value={line.description}
-                onChange={handleLineChange("description")}
-              />
-            </div>
+          {/* ROWS */}
+          <div className="space-y-2">
+            {items.map((item, index) => {
+              const lineTotal = item.quantity * item.unitPrice;
+              const descId = `line-${item.id}-desc`;
+              const qtyId = `line-${item.id}-qty`;
+              const priceId = `line-${item.id}-price`;
 
-            {/* Qty */}
-            <div className="flex flex-col">
-              <label htmlFor="line-1-qty" className="sr-only">
-                Line 1 quantity
-              </label>
-              <input
-                id="line-1-qty"
-                type="number"
-                min={0}
-                placeholder="1"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-right text-xs"
-                value={line.quantity}
-                onChange={handleLineChange("quantity")}
-              />
-            </div>
+              return (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-[2fr_repeat(3,minmax(0,1fr))] gap-2"
+                >
+                  {/* Description */}
+                  <div className="flex flex-col">
+                    <label htmlFor={descId} className="sr-only">
+                      Line {index + 1} description
+                    </label>
+                    <input
+                      id={descId}
+                      placeholder="Description"
+                      className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs"
+                      value={item.description}
+                      onChange={updateItem(item.id, "description")}
+                    />
+                  </div>
 
-            {/* Unit price */}
-            <div className="flex flex-col">
-              <label htmlFor="line-1-price" className="sr-only">
-                Line 1 unit price
-              </label>
-              <input
-                id="line-1-price"
-                type="number"
-                min={0}
-                placeholder="0.00"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-right text-xs"
-                value={line.unitPrice}
-                onChange={handleLineChange("unitPrice")}
-              />
-            </div>
+                  {/* Qty */}
+                  <div className="flex flex-col">
+                    <label htmlFor={qtyId} className="sr-only">
+                      Line {index + 1} quantity
+                    </label>
+                    <input
+                      id={qtyId}
+                      type="number"
+                      min={0}
+                      placeholder="1"
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-right text-xs"
+                      value={item.quantity}
+                      onChange={updateItem(item.id, "quantity")}
+                    />
+                  </div>
 
-            {/* Total */}
-            <div className="flex items-center justify-end text-xs text-slate-200">
-              {formatMoney(subtotal)}
-            </div>
+                  {/* Unit price */}
+                  <div className="flex flex-col">
+                    <label htmlFor={priceId} className="sr-only">
+                      Line {index + 1} unit price
+                    </label>
+                    <input
+                      id={priceId}
+                      type="number"
+                      min={0}
+                      placeholder="0.00"
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-right text-xs"
+                      value={item.unitPrice}
+                      onChange={updateItem(item.id, "unitPrice")}
+                    />
+                  </div>
+
+                  {/* Total + delete */}
+                  <div className="flex items-center justify-end gap-2 text-xs text-slate-200">
+                    <span>{formatMoney(lineTotal)}</span>
+                    <button
+                      type="button"
+                      className="rounded-full border border-slate-700 px-2 py-1 text-[10px] text-slate-400 hover:border-red-500 hover:text-red-400"
+                      onClick={() => removeLine(item.id)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
