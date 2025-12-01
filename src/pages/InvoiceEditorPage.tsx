@@ -1,6 +1,54 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
+
+type LineItem = {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+};
 
 export function InvoiceEditorPage() {
+  const [line, setLine] = useState<LineItem>({
+    description: "Landing page design",
+    quantity: 1,
+    unitPrice: 900,
+  });
+
+  const [taxRate, setTaxRate] = useState<number>(20);
+
+  const subtotal = useMemo(
+    () => line.quantity * line.unitPrice,
+    [line.quantity, line.unitPrice]
+  );
+
+  const taxAmount = useMemo(
+    () => (subtotal * taxRate) / 100,
+    [subtotal, taxRate]
+  );
+
+  const total = subtotal + taxAmount;
+
+  const handleLineChange =
+    (field: keyof LineItem) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value =
+        field === "description" ? e.target.value : Number(e.target.value) || 0;
+
+      setLine((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    };
+
+  const handleTaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setTaxRate(Number.isFinite(value) ? value : 0);
+  };
+
+  const formatMoney = (value: number) =>
+    `€${value.toLocaleString("fr-FR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+
   return (
     <div className="grid w-full gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
       {/* FORM SIDE */}
@@ -123,7 +171,7 @@ export function InvoiceEditorPage() {
             <span className="text-right">Total</span>
           </div>
 
-          {/* EXAMPLE ROW (static for now) */}
+          {/* SINGLE ROW (controlled) */}
           <div className="grid grid-cols-[2fr_repeat(3,minmax(0,1fr))] gap-2">
             {/* Description */}
             <div className="flex flex-col">
@@ -134,7 +182,8 @@ export function InvoiceEditorPage() {
                 id="line-1-desc"
                 placeholder="Description"
                 className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs"
-                defaultValue="Landing page design"
+                value={line.description}
+                onChange={handleLineChange("description")}
               />
             </div>
 
@@ -146,9 +195,11 @@ export function InvoiceEditorPage() {
               <input
                 id="line-1-qty"
                 type="number"
+                min={0}
                 placeholder="1"
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-right text-xs"
-                defaultValue={1}
+                value={line.quantity}
+                onChange={handleLineChange("quantity")}
               />
             </div>
 
@@ -160,15 +211,17 @@ export function InvoiceEditorPage() {
               <input
                 id="line-1-price"
                 type="number"
+                min={0}
                 placeholder="0.00"
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-right text-xs"
-                defaultValue={900}
+                value={line.unitPrice}
+                onChange={handleLineChange("unitPrice")}
               />
             </div>
 
             {/* Total */}
             <div className="flex items-center justify-end text-xs text-slate-200">
-              €900
+              {formatMoney(subtotal)}
             </div>
           </div>
         </div>
@@ -200,24 +253,28 @@ export function InvoiceEditorPage() {
               <input
                 id="tax-rate"
                 type="number"
+                min={0}
                 placeholder="0"
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-right"
-                defaultValue={20}
+                value={taxRate}
+                onChange={handleTaxChange}
               />
             </div>
             <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 text-[11px]">
               <div className="flex justify-between">
                 <span className="text-slate-400">Subtotal</span>
-                <span>€900</span>
+                <span>{formatMoney(subtotal)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Tax</span>
-                <span>€180</span>
+                <span>{formatMoney(taxAmount)}</span>
               </div>
               <div className="mt-1 h-px bg-slate-800" />
               <div className="mt-1 flex justify-between text-xs">
                 <span className="text-slate-300">Total</span>
-                <span className="font-semibold text-sky-400">€1,080</span>
+                <span className="font-semibold text-sky-400">
+                  {formatMoney(total)}
+                </span>
               </div>
             </div>
           </div>
@@ -230,8 +287,12 @@ export function InvoiceEditorPage() {
         <div className="h-[calc(100vh-220px)] overflow-auto rounded-xl bg-white p-6 text-slate-900">
           <p className="text-sm font-semibold">Invoice preview</p>
           <p className="mt-2 text-[11px] text-slate-500">
-            This will show the final PDF layout. We&apos;ll connect it to the
-            form on the left later.
+            Subtotal: {formatMoney(subtotal)} • Tax: {formatMoney(taxAmount)} •
+            Total: <span className="font-semibold">{formatMoney(total)}</span>
+          </p>
+          <p className="mt-4 text-[11px] text-slate-500">
+            Later we&apos;ll replace this with a real PDF layout connected to
+            all fields.
           </p>
         </div>
       </div>
