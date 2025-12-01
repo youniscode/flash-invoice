@@ -1,5 +1,3 @@
-import React from "react";
-
 export function LandingPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
