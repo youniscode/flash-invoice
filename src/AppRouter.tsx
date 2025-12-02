@@ -3,6 +3,8 @@ import { LandingPage } from "./pages/LandingPage";
 import { AppShell } from "./components/layout/AppShell";
 import { DashboardPage } from "./pages/DashboardPage";
 import { InvoiceEditorPage } from "./pages/InvoiceEditorPage";
+import { HistoryPage } from "./pages/HistoryPage";
+
 
 function AppRouter() {
   return (
@@ -15,6 +17,7 @@ function AppRouter() {
         <Route path="/app" element={<AppShell />}>
           <Route index element={<DashboardPage />} />
           <Route path="new-invoice" element={<InvoiceEditorPage />} />
+          <Route path="history" element={<HistoryPage />} />
           {/* Placeholders for future pages */}
           <Route
             path="history"

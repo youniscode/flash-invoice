@@ -25,6 +25,23 @@ type InvoiceDraft = {
 
 const DRAFT_KEY = "fi-invoice-draft-v1";
 
+const INVOICES_KEY = "fi-invoices-v1";
+
+type SavedInvoiceMeta = {
+  id: string;
+  createdAt: string;
+  clientName: string;
+  invoiceNumber: string;
+  total: number;
+  currency: string;
+};
+
+type SavedInvoiceRecord = {
+  meta: SavedInvoiceMeta;
+  data: InvoiceDraft;
+};
+
+
 function createLine(partial?: Partial<LineItem>): LineItem {
   return {
     id: Math.random().toString(36).slice(2),
@@ -166,6 +183,38 @@ export function InvoiceEditorPage() {
     setInvoice(defaultDraft);
   };
 
+  const saveToHistory = () => {
+    if (typeof window === "undefined") return;
+
+    let existing: SavedInvoiceRecord[] = [];
+    try {
+      const raw = window.localStorage.getItem(INVOICES_KEY);
+      if (raw) {
+        existing = JSON.parse(raw) as SavedInvoiceRecord[];
+      }
+    } catch {
+      existing = [];
+    }
+
+    const clientName =
+      invoice.to.split("\n").map((s) => s.trim())[0] || "Client";
+
+    const record: SavedInvoiceRecord = {
+      meta: {
+        id: Math.random().toString(36).slice(2),
+        createdAt: new Date().toISOString(),
+        clientName,
+        invoiceNumber: invoice.invoiceNumber || "INV-0001",
+        total,
+        currency: invoice.currency || "EUR",
+      },
+      data: invoice,
+    };
+
+    const updated = [...existing, record];
+    window.localStorage.setItem(INVOICES_KEY, JSON.stringify(updated));
+  };
+
   const handleDownloadPdf = async () => {
     const el = document.getElementById("invoice-preview");
     if (!el) return;
@@ -204,6 +253,13 @@ export function InvoiceEditorPage() {
               className="rounded-lg border border-slate-700 px-3 py-1 text-slate-300 hover:border-sky-500"
             >
               Draft auto-saved
+            </button>
+            <button
+              type="button"
+              onClick={saveToHistory}
+              className="rounded-lg border border-slate-700 px-3 py-1 text-slate-300 hover:border-sky-500"
+            >
+              Save to history
             </button>
             <button
               type="button"
