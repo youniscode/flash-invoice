@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+
 type LineItem = {
   id: string;
   description: string;
@@ -163,6 +166,26 @@ export function InvoiceEditorPage() {
     setInvoice(defaultDraft);
   };
 
+  const handleDownloadPdf = async () => {
+    const el = document.getElementById("invoice-preview");
+    if (!el) return;
+
+    const canvas = await html2canvas(el as HTMLElement, {
+      scale: 2, // better quality
+      useCORS: true,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+    pdf.save(`${invoice.invoiceNumber || "invoice"}.pdf`);
+  };
+
   const formatMoney = (value: number) =>
     `€${value.toLocaleString("fr-FR", {
       minimumFractionDigits: 2,
@@ -189,7 +212,11 @@ export function InvoiceEditorPage() {
             >
               New blank
             </button>
-            <button className="rounded-lg bg-sky-500 px-3 py-1 font-medium text-slate-950 hover:bg-sky-400">
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              className="rounded-lg bg-sky-500 px-3 py-1 font-medium text-slate-950 hover:bg-sky-400"
+            >
               Download PDF
             </button>
           </div>
@@ -455,7 +482,10 @@ export function InvoiceEditorPage() {
       {/* PREVIEW SIDE */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-xs">
         <p className="mb-2 text-[11px] text-slate-400">Preview</p>
-        <div className="h-[calc(100vh-220px)] overflow-auto rounded-xl bg-white p-6 text-slate-900">
+        <div
+          id="invoice-preview"
+          className="h-[calc(100vh-220px)] overflow-auto rounded-xl bg-white p-6 text-slate-900"
+        >
           <p className="text-sm font-semibold">Invoice preview</p>
           <p className="mt-2 text-[11px] text-slate-500">
             Subtotal: {formatMoney(subtotal)} • Tax: {formatMoney(taxAmount)} •
