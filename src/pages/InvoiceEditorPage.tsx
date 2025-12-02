@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
 
 type LineItem = {
   id: string;
@@ -6,6 +7,20 @@ type LineItem = {
   quantity: number;
   unitPrice: number;
 };
+
+type InvoiceDraft = {
+  from: string;
+  to: string;
+  invoiceNumber: string;
+  issueDate: string;
+  dueDate: string;
+  currency: string;
+  notes: string;
+  taxRate: number;
+  items: LineItem[];
+};
+
+const DRAFT_KEY = "fi-invoice-draft-v1";
 
 function createLine(partial?: Partial<LineItem>): LineItem {
   return {
@@ -16,59 +31,136 @@ function createLine(partial?: Partial<LineItem>): LineItem {
   };
 }
 
-export function InvoiceEditorPage() {
-  const [items, setItems] = useState<LineItem[]>([
+const defaultDraft: InvoiceDraft = {
+  from: "",
+  to: "",
+  invoiceNumber: "INV-0001",
+  issueDate: "",
+  dueDate: "",
+  currency: "EUR",
+  notes: "",
+  taxRate: 20,
+  items: [
     createLine({
       description: "Landing page design",
       quantity: 1,
       unitPrice: 900,
     }),
-  ]);
+  ],
+};
 
-  const [taxRate, setTaxRate] = useState<number>(20);
+function loadInitialDraft(): InvoiceDraft {
+  if (typeof window === "undefined") return defaultDraft;
+
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    if (!raw) return defaultDraft;
+
+    const parsed = JSON.parse(raw) as Partial<InvoiceDraft>;
+
+    return {
+      ...defaultDraft,
+      ...parsed,
+      items: (parsed.items ?? defaultDraft.items).map((item) => ({
+        ...createLine(),
+        ...item,
+      })),
+      taxRate:
+        typeof parsed.taxRate === "number"
+          ? parsed.taxRate
+          : defaultDraft.taxRate,
+    };
+  } catch {
+    return defaultDraft;
+  }
+}
+
+export function InvoiceEditorPage() {
+  // INIT from localStorage (no effect, no red)
+  const [invoice, setInvoice] = useState<InvoiceDraft>(() =>
+    loadInitialDraft()
+  );
+
+  // SAVE draft whenever invoice changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(invoice));
+  }, [invoice]);
 
   const subtotal = useMemo(
-    () => items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
-    [items]
+    () =>
+      invoice.items.reduce(
+        (sum, item) => sum + item.quantity * item.unitPrice,
+        0
+      ),
+    [invoice.items]
   );
 
   const taxAmount = useMemo(
-    () => (subtotal * taxRate) / 100,
-    [subtotal, taxRate]
+    () => (subtotal * invoice.taxRate) / 100,
+    [subtotal, invoice.taxRate]
   );
 
   const total = subtotal + taxAmount;
 
+  const onFieldChange =
+    (field: keyof Omit<InvoiceDraft, "items" | "taxRate">) =>
+    (
+      e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
+      const value = e.target.value;
+      setInvoice((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    };
+
+  const handleTaxChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setInvoice((prev) => ({
+      ...prev,
+      taxRate: Number.isFinite(value) ? value : prev.taxRate,
+    }));
+  };
+
   const updateItem =
     (id: string, field: keyof LineItem) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: ChangeEvent<HTMLInputElement>) => {
       const value =
         field === "description" ? e.target.value : Number(e.target.value) || 0;
 
-      setItems((prev) =>
-        prev.map((item) =>
+      setInvoice((prev) => ({
+        ...prev,
+        items: prev.items.map((item) =>
           item.id === id ? { ...item, [field]: value } : item
-        )
-      );
+        ),
+      }));
     };
 
   const addLine = () => {
-    setItems((prev) => [...prev, createLine()]);
+    setInvoice((prev) => ({
+      ...prev,
+      items: [...prev.items, createLine()],
+    }));
   };
 
   const removeLine = (id: string) => {
-    setItems((prev) => {
-      if (prev.length === 1) {
-        // keep at least one row – just clear it
-        return [createLine()];
+    setInvoice((prev) => {
+      if (prev.items.length === 1) {
+        return {
+          ...prev,
+          items: [createLine()],
+        };
       }
-      return prev.filter((item) => item.id !== id);
+      return {
+        ...prev,
+        items: prev.items.filter((item) => item.id !== id),
+      };
     });
   };
 
-  const handleTaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number(e.target.value);
-    setTaxRate(Number.isFinite(value) ? value : 0);
+  const resetToBlank = () => {
+    setInvoice(defaultDraft);
   };
 
   const formatMoney = (value: number) =>
@@ -84,8 +176,18 @@ export function InvoiceEditorPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Invoice editor</h2>
           <div className="flex gap-2 text-[11px]">
-            <button className="rounded-lg border border-slate-700 px-3 py-1 hover:border-sky-500">
-              Save draft
+            <button
+              type="button"
+              className="rounded-lg border border-slate-700 px-3 py-1 text-slate-300 hover:border-sky-500"
+            >
+              Draft auto-saved
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-slate-700 px-3 py-1 text-slate-300 hover:border-sky-500"
+              onClick={resetToBlank}
+            >
+              New blank
             </button>
             <button className="rounded-lg bg-sky-500 px-3 py-1 font-medium text-slate-950 hover:bg-sky-400">
               Download PDF
@@ -107,6 +209,8 @@ export function InvoiceEditorPage() {
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs"
               rows={3}
               placeholder={`Your Name\nYour business name\nAddress\nEmail\nTax ID`}
+              value={invoice.from}
+              onChange={onFieldChange("from")}
             />
           </div>
           <div>
@@ -121,6 +225,8 @@ export function InvoiceEditorPage() {
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs"
               rows={3}
               placeholder={`Client name\nCompany\nAddress\nEmail`}
+              value={invoice.to}
+              onChange={onFieldChange("to")}
             />
           </div>
         </div>
@@ -138,6 +244,8 @@ export function InvoiceEditorPage() {
               id="invoice-number"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs"
               placeholder="INV-0001"
+              value={invoice.invoiceNumber}
+              onChange={onFieldChange("invoiceNumber")}
             />
           </div>
           <div>
@@ -151,6 +259,8 @@ export function InvoiceEditorPage() {
               id="issue-date"
               type="date"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs"
+              value={invoice.issueDate}
+              onChange={onFieldChange("issueDate")}
             />
           </div>
           <div>
@@ -164,6 +274,8 @@ export function InvoiceEditorPage() {
               id="due-date"
               type="date"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs"
+              value={invoice.dueDate}
+              onChange={onFieldChange("dueDate")}
             />
           </div>
           <div>
@@ -176,10 +288,12 @@ export function InvoiceEditorPage() {
             <select
               id="currency"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs"
+              value={invoice.currency}
+              onChange={onFieldChange("currency")}
             >
-              <option>EUR</option>
-              <option>USD</option>
-              <option>GBP</option>
+              <option value="EUR">EUR</option>
+              <option value="USD">USD</option>
+              <option value="GBP">GBP</option>
             </select>
           </div>
         </div>
@@ -207,7 +321,7 @@ export function InvoiceEditorPage() {
 
           {/* ROWS */}
           <div className="space-y-2">
-            {items.map((item, index) => {
+            {invoice.items.map((item, index) => {
               const lineTotal = item.quantity * item.unitPrice;
               const descId = `line-${item.id}-desc`;
               const qtyId = `line-${item.id}-qty`;
@@ -295,6 +409,8 @@ export function InvoiceEditorPage() {
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs"
               rows={3}
               placeholder="Payment terms, bank details, thank you message..."
+              value={invoice.notes}
+              onChange={onFieldChange("notes")}
             />
           </div>
           <div className="space-y-3">
@@ -311,7 +427,7 @@ export function InvoiceEditorPage() {
                 min={0}
                 placeholder="0"
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-right"
-                value={taxRate}
+                value={invoice.taxRate}
                 onChange={handleTaxChange}
               />
             </div>
@@ -346,8 +462,8 @@ export function InvoiceEditorPage() {
             Total: <span className="font-semibold">{formatMoney(total)}</span>
           </p>
           <p className="mt-4 text-[11px] text-slate-500">
-            Later we&apos;ll replace this with a real PDF layout connected to
-            all fields.
+            Your draft is saved automatically in your browser. You can close
+            this tab and come back later without losing your invoice.
           </p>
         </div>
       </div>
