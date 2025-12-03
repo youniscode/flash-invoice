@@ -4,7 +4,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { DashboardPage } from "./pages/DashboardPage";
 import { InvoiceEditorPage } from "./pages/InvoiceEditorPage";
 import { HistoryPage } from "./pages/HistoryPage";
-
+import { SettingsPage } from "./pages/SettingsPage";
 
 function AppRouter() {
   return (
@@ -18,6 +18,7 @@ function AppRouter() {
           <Route index element={<DashboardPage />} />
           <Route path="new-invoice" element={<InvoiceEditorPage />} />
           <Route path="history" element={<HistoryPage />} />
+          <Route path="settings" element={<SettingsPage />} />
           {/* Placeholders for future pages */}
           <Route
             path="history"

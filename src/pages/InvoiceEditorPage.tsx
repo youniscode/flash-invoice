@@ -70,11 +70,48 @@ const defaultDraft: InvoiceDraft = {
   ],
 };
 
+type SettingsData = {
+  businessInfo?: string;
+  defaultTaxRate?: number;
+  defaultCurrency?: string;
+  logoDataUrl?: string | null;
+};
+
+const SETTINGS_KEY = "fi-settings-v1";
+
+function getSettingsDefaults(): Partial<InvoiceDraft> {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw) as SettingsData;
+    const partial: Partial<InvoiceDraft> = {};
+
+    if (parsed.businessInfo) {
+      partial.from = parsed.businessInfo;
+    }
+    if (typeof parsed.defaultTaxRate === "number") {
+      partial.taxRate = parsed.defaultTaxRate;
+    }
+    if (parsed.defaultCurrency) {
+      partial.currency = parsed.defaultCurrency;
+    }
+
+    return partial;
+  } catch {
+    return {};
+  }
+}
+
 function loadInitialDraft(): InvoiceDraft {
   if (typeof window === "undefined") return defaultDraft;
 
   try {
-    // 1) Check if user clicked "Open" from history
+    const settingsDefaults = getSettingsDefaults();
+
+    // 1) If coming from history "Open"
     const selectedId = window.localStorage.getItem(SELECTED_INVOICE_KEY);
     if (selectedId) {
       // one-shot behavior: clear selection
@@ -90,6 +127,7 @@ function loadInitialDraft(): InvoiceDraft {
 
           return {
             ...defaultDraft,
+            ...settingsDefaults,
             ...parsed,
             items: (parsed.items ?? defaultDraft.items).map((item) => ({
               ...createLine(),
@@ -98,20 +136,29 @@ function loadInitialDraft(): InvoiceDraft {
             taxRate:
               typeof parsed.taxRate === "number"
                 ? parsed.taxRate
+                : typeof settingsDefaults.taxRate === "number"
+                ? settingsDefaults.taxRate
                 : defaultDraft.taxRate,
           };
         }
       }
     }
 
-    // 2) Fallback: load the draft as before
+    // 2) Fallback: load last draft
     const raw = window.localStorage.getItem(DRAFT_KEY);
-    if (!raw) return defaultDraft;
+    if (!raw) {
+      // no draft -> just defaults + settings
+      return {
+        ...defaultDraft,
+        ...settingsDefaults,
+      };
+    }
 
     const parsed = JSON.parse(raw) as Partial<InvoiceDraft>;
 
     return {
       ...defaultDraft,
+      ...settingsDefaults,
       ...parsed,
       items: (parsed.items ?? defaultDraft.items).map((item) => ({
         ...createLine(),
@@ -120,6 +167,8 @@ function loadInitialDraft(): InvoiceDraft {
       taxRate:
         typeof parsed.taxRate === "number"
           ? parsed.taxRate
+          : typeof settingsDefaults.taxRate === "number"
+          ? settingsDefaults.taxRate
           : defaultDraft.taxRate,
     };
   } catch {
@@ -212,7 +261,11 @@ export function InvoiceEditorPage() {
   };
 
   const resetToBlank = () => {
-    setInvoice(defaultDraft);
+    const settingsDefaults = getSettingsDefaults();
+    setInvoice({
+      ...defaultDraft,
+      ...settingsDefaults,
+    });
   };
 
   const saveToHistory = () => {
