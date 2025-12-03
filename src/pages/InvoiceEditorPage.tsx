@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import type { ChangeEvent } from "react";
 
 import jsPDF from "jspdf";
@@ -24,9 +24,7 @@ type InvoiceDraft = {
 };
 
 const DRAFT_KEY = "fi-invoice-draft-v1";
-
 const INVOICES_KEY = "fi-invoices-v1";
-
 const SELECTED_INVOICE_KEY = "fi-selected-invoice-id";
 
 type SavedInvoiceMeta = {
@@ -176,11 +174,31 @@ function loadInitialDraft(): InvoiceDraft {
   }
 }
 
+function loadInitialLogo(): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as SettingsData;
+
+    if (parsed.logoDataUrl && typeof parsed.logoDataUrl === "string") {
+      return parsed.logoDataUrl;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function InvoiceEditorPage() {
   // INIT from localStorage (no effect, no red)
   const [invoice, setInvoice] = useState<InvoiceDraft>(() =>
     loadInitialDraft()
   );
+  const [logoUrl] = useState<string | null>(() => loadInitialLogo());
+  const previewRef = useRef<HTMLDivElement | null>(null);
 
   // SAVE draft whenever invoice changes
   useEffect(() => {
@@ -301,10 +319,10 @@ export function InvoiceEditorPage() {
   };
 
   const handleDownloadPdf = async () => {
-    const el = document.getElementById("invoice-preview");
+    const el = previewRef.current;
     if (!el) return;
 
-    const canvas = await html2canvas(el as HTMLElement, {
+    const canvas = await html2canvas(el, {
       scale: 2, // better quality
       useCORS: true,
     });
@@ -624,14 +642,39 @@ export function InvoiceEditorPage() {
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-xs">
         <p className="mb-2 text-[11px] text-slate-400">Preview</p>
         <div
-          id="invoice-preview"
+          ref={previewRef}
           className="h-[calc(100vh-220px)] overflow-auto rounded-xl bg-white p-6 text-slate-900"
         >
-          <p className="text-sm font-semibold">Invoice preview</p>
-          <p className="mt-2 text-[11px] text-slate-500">
-            Subtotal: {formatMoney(subtotal)} • Tax: {formatMoney(taxAmount)} •
+          {/* HEADER */}
+          <div className="flex items-start justify-between border-b border-slate-200 pb-4">
+            <div className="flex items-center gap-3">
+              {logoUrl && (
+                <img
+                  src={logoUrl}
+                  alt="Invoice logo"
+                  className="h-10 w-auto rounded-md"
+                />
+              )}
+              <div>
+                <p className="text-xs font-semibold">Invoice</p>
+                <p className="text-[11px] text-slate-500">
+                  #{invoice.invoiceNumber || "—"}
+                </p>
+              </div>
+            </div>
+            <div className="text-right text-[11px] text-slate-600">
+              <p>Issue: {invoice.issueDate || "—"}</p>
+              <p>Due: {invoice.dueDate || "—"}</p>
+              <p className="mt-1 font-semibold">Total: {formatMoney(total)}</p>
+            </div>
+          </div>
+
+          {/* BODY SUMMARY */}
+          <p className="mt-4 text-[11px] text-slate-600">
+            Subtotal: {formatMoney(subtotal)} • Tax: {formatMoney(taxAmount)} •{" "}
             Total: <span className="font-semibold">{formatMoney(total)}</span>
           </p>
+
           <p className="mt-4 text-[11px] text-slate-500">
             Your draft is saved automatically in your browser. You can close
             this tab and come back later without losing your invoice.
