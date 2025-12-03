@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const INVOICES_KEY = "fi-invoices-v1";
+const SELECTED_INVOICE_KEY = "fi-selected-invoice-id";
 
 type HistoryItem = {
   id: string;
@@ -35,6 +37,14 @@ export function HistoryPage() {
     }
   });
 
+  const navigate = useNavigate();
+
+  const openInvoice = (id: string) => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SELECTED_INVOICE_KEY, id);
+    }
+    navigate("/app/new-invoice");
+  };
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
@@ -84,8 +94,10 @@ export function HistoryPage() {
               <th className="py-2 pr-4">Invoice #</th>
               <th className="py-2 pr-4">Client</th>
               <th className="py-2 pr-4 text-right">Total</th>
+              <th className="py-2 pr-0 text-right">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {items.map((inv) => (
               <tr
@@ -99,6 +111,15 @@ export function HistoryPage() {
                 <td className="py-2 pr-4">{inv.clientName}</td>
                 <td className="py-2 pr-4 text-right">
                   {formatMoney(inv.total, inv.currency)}
+                </td>
+                <td className="py-2 pr-0 text-right">
+                  <button
+                    type="button"
+                    onClick={() => openInvoice(inv.id)}
+                    className="rounded-lg border border-slate-700 px-3 py-1 text-[11px] text-slate-200 hover:border-sky-500 hover:text-sky-300"
+                  >
+                    Open
+                  </button>
                 </td>
               </tr>
             ))}

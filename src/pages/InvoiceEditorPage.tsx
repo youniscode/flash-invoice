@@ -27,6 +27,8 @@ const DRAFT_KEY = "fi-invoice-draft-v1";
 
 const INVOICES_KEY = "fi-invoices-v1";
 
+const SELECTED_INVOICE_KEY = "fi-selected-invoice-id";
+
 type SavedInvoiceMeta = {
   id: string;
   createdAt: string;
@@ -40,7 +42,6 @@ type SavedInvoiceRecord = {
   meta: SavedInvoiceMeta;
   data: InvoiceDraft;
 };
-
 
 function createLine(partial?: Partial<LineItem>): LineItem {
   return {
@@ -73,6 +74,37 @@ function loadInitialDraft(): InvoiceDraft {
   if (typeof window === "undefined") return defaultDraft;
 
   try {
+    // 1) Check if user clicked "Open" from history
+    const selectedId = window.localStorage.getItem(SELECTED_INVOICE_KEY);
+    if (selectedId) {
+      // one-shot behavior: clear selection
+      window.localStorage.removeItem(SELECTED_INVOICE_KEY);
+
+      const rawInvoices = window.localStorage.getItem(INVOICES_KEY);
+      if (rawInvoices) {
+        const records = JSON.parse(rawInvoices) as SavedInvoiceRecord[];
+        const match = records.find((r) => r.meta.id === selectedId);
+
+        if (match) {
+          const parsed = match.data;
+
+          return {
+            ...defaultDraft,
+            ...parsed,
+            items: (parsed.items ?? defaultDraft.items).map((item) => ({
+              ...createLine(),
+              ...item,
+            })),
+            taxRate:
+              typeof parsed.taxRate === "number"
+                ? parsed.taxRate
+                : defaultDraft.taxRate,
+          };
+        }
+      }
+    }
+
+    // 2) Fallback: load the draft as before
     const raw = window.localStorage.getItem(DRAFT_KEY);
     if (!raw) return defaultDraft;
 
