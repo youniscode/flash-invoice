@@ -13,30 +13,38 @@ type HistoryItem = {
   currency: string;
 };
 
+type SavedInvoiceRecord = {
+  meta: HistoryItem;
+  // data: InvoiceDraft; // we don't need it here, so keep as implicit
+};
+
+function mapRecordsToItems(records: SavedInvoiceRecord[]): HistoryItem[] {
+  const mapped = records.map((r) => r.meta);
+
+  // newest first
+  mapped.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  return mapped;
+}
+
+function loadHistoryItems(): HistoryItem[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(INVOICES_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw) as SavedInvoiceRecord[];
+    return mapRecordsToItems(parsed);
+  } catch {
+    return [];
+  }
+}
+
 export function HistoryPage() {
-  const [items] = useState<HistoryItem[]>(() => {
-    if (typeof window === "undefined") return [];
-
-    try {
-      const raw = window.localStorage.getItem(INVOICES_KEY);
-      if (!raw) return [];
-
-      const parsed = JSON.parse(raw) as { meta: HistoryItem }[];
-
-      const mapped: HistoryItem[] = parsed.map((r) => r.meta);
-
-      // newest first
-      mapped.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-
-      return mapped;
-    } catch {
-      return [];
-    }
-  });
-
+  const [items, setItems] = useState<HistoryItem[]>(() => loadHistoryItems());
   const navigate = useNavigate();
 
   const openInvoice = (id: string) => {
@@ -44,6 +52,57 @@ export function HistoryPage() {
       window.localStorage.setItem(SELECTED_INVOICE_KEY, id);
     }
     navigate("/app/new-invoice");
+  };
+
+  const duplicateInvoice = (id: string) => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const raw = window.localStorage.getItem(INVOICES_KEY);
+      if (!raw) return;
+
+      const records = JSON.parse(raw) as SavedInvoiceRecord[];
+      const original = records.find((r) => r.meta.id === id);
+      if (!original) return;
+
+      const now = new Date().toISOString();
+      const newId = Math.random().toString(36).slice(2);
+
+      const duplicated: SavedInvoiceRecord = {
+        ...original,
+        meta: {
+          ...original.meta,
+          id: newId,
+          createdAt: now,
+          invoiceNumber: original.meta.invoiceNumber + " (copy)",
+        },
+      };
+
+      const updatedRecords = [...records, duplicated];
+      window.localStorage.setItem(INVOICES_KEY, JSON.stringify(updatedRecords));
+
+      setItems(mapRecordsToItems(updatedRecords));
+    } catch {
+      // ignore errors for now
+    }
+  };
+
+  const deleteInvoice = (id: string) => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const raw = window.localStorage.getItem(INVOICES_KEY);
+      if (!raw) return;
+
+      const records = JSON.parse(raw) as SavedInvoiceRecord[];
+      const updatedRecords = records.filter((r) => r.meta.id !== id);
+
+      window.localStorage.setItem(INVOICES_KEY, JSON.stringify(updatedRecords));
+
+      setItems(mapRecordsToItems(updatedRecords));
+    } catch {
+      // ignore errors for now
+    }
   };
 
   const formatDate = (iso: string) => {
@@ -104,7 +163,7 @@ export function HistoryPage() {
                 key={inv.id}
                 className="border-b border-slate-900/80 text-[11px] text-slate-200 hover:bg-slate-900"
               >
-                <td className="py-2 pr-4 whitespace-nowrap">
+                <td className="whitespace-nowrap py-2 pr-4">
                   {formatDate(inv.createdAt)}
                 </td>
                 <td className="py-2 pr-4">{inv.invoiceNumber}</td>
@@ -112,13 +171,27 @@ export function HistoryPage() {
                 <td className="py-2 pr-4 text-right">
                   {formatMoney(inv.total, inv.currency)}
                 </td>
-                <td className="py-2 pr-0 text-right">
+                <td className="py-2 pr-0 text-right space-x-2">
                   <button
                     type="button"
                     onClick={() => openInvoice(inv.id)}
                     className="rounded-lg border border-slate-700 px-3 py-1 text-[11px] text-slate-200 hover:border-sky-500 hover:text-sky-300"
                   >
                     Open
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => duplicateInvoice(inv.id)}
+                    className="rounded-lg border border-slate-700 px-3 py-1 text-[11px] text-slate-300 hover:border-slate-500 hover:text-slate-100"
+                  >
+                    Duplicate
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteInvoice(inv.id)}
+                    className="rounded-lg border border-red-700 px-3 py-1 text-[11px] text-red-300 hover:border-red-500 hover:text-red-200"
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>

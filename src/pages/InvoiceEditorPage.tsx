@@ -663,8 +663,8 @@ export function InvoiceEditorPage() {
               </div>
             </div>
             <div className="text-right text-[11px] text-slate-600">
-              <p>Issue: {invoice.issueDate || "—"}</p>
-              <p>Due: {invoice.dueDate || "—"}</p>
+              <p>Issue: {invoice.issueDate || ""}</p>
+              <p>Due: {invoice.dueDate || ""}</p>
               <p className="mt-1 font-semibold">Total: {formatMoney(total)}</p>
             </div>
           </div>
