@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const INVOICES_KEY = "fi-invoices-v1";
 const SELECTED_INVOICE_KEY = "fi-selected-invoice-id";
@@ -15,7 +16,6 @@ type HistoryItem = {
 
 type SavedInvoiceRecord = {
   meta: HistoryItem;
-  // data: InvoiceDraft; // we don't need it here, so keep as implicit
 };
 
 function mapRecordsToItems(records: SavedInvoiceRecord[]): HistoryItem[] {
@@ -44,6 +44,7 @@ function loadHistoryItems(): HistoryItem[] {
 }
 
 export function HistoryPage() {
+  const { t } = useLanguage();
   const [items, setItems] = useState<HistoryItem[]>(() => loadHistoryItems());
   const navigate = useNavigate();
 
@@ -126,10 +127,8 @@ export function HistoryPage() {
   if (!items.length) {
     return (
       <div className="flex w-full flex-col items-center justify-center text-xs text-slate-400">
-        <p>No saved invoices yet.</p>
-        <p className="mt-1">
-          Create an invoice in the editor and click &quot;Save to history&quot;.
-        </p>
+        <p>{t("historyEmptyTitle")}</p>
+        <p className="mt-1">{t("historyEmptyBody")}</p>
       </div>
     );
   }
@@ -138,10 +137,10 @@ export function HistoryPage() {
     <div className="w-full rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-xs">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-100">
-          Invoice history
+          {t("historyTitleFull")}
         </h2>
         <p className="text-[11px] text-slate-400">
-          Stored locally in your browser.
+          {t("historyStoredLocally")}
         </p>
       </div>
 
@@ -149,11 +148,15 @@ export function HistoryPage() {
         <table className="min-w-full border-collapse text-left">
           <thead>
             <tr className="border-b border-slate-800 text-[11px] text-slate-400">
-              <th className="py-2 pr-4">Date</th>
-              <th className="py-2 pr-4">Invoice #</th>
-              <th className="py-2 pr-4">Client</th>
-              <th className="py-2 pr-4 text-right">Total</th>
-              <th className="py-2 pr-0 text-right">Actions</th>
+              <th className="py-2 pr-4">{t("historyDateHeader")}</th>
+              <th className="py-2 pr-4">{t("historyInvoiceHeader")}</th>
+              <th className="py-2 pr-4">{t("historyClientHeader")}</th>
+              <th className="py-2 pr-4 text-right">
+                {t("historyTotalHeader")}
+              </th>
+              <th className="py-2 pr-0 text-right">
+                {t("historyActionsHeader")}
+              </th>
             </tr>
           </thead>
 
@@ -177,21 +180,21 @@ export function HistoryPage() {
                     onClick={() => openInvoice(inv.id)}
                     className="rounded-lg border border-slate-700 px-3 py-1 text-[11px] text-slate-200 hover:border-sky-500 hover:text-sky-300"
                   >
-                    Open
+                    {t("historyOpen")}
                   </button>
                   <button
                     type="button"
                     onClick={() => duplicateInvoice(inv.id)}
                     className="rounded-lg border border-slate-700 px-3 py-1 text-[11px] text-slate-300 hover:border-slate-500 hover:text-slate-100"
                   >
-                    Duplicate
+                    {t("historyDuplicate")}
                   </button>
                   <button
                     type="button"
                     onClick={() => deleteInvoice(inv.id)}
                     className="rounded-lg border border-red-700 px-3 py-1 text-[11px] text-red-300 hover:border-red-500 hover:text-red-200"
                   >
-                    Delete
+                    {t("historyDelete")}
                   </button>
                 </td>
               </tr>

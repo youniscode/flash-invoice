@@ -3,6 +3,8 @@ import type { ChangeEvent } from "react";
 
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { useLanguage } from "../i18n/useLanguage";
+
 
 type LineItem = {
   id: string;
@@ -193,6 +195,8 @@ function loadInitialLogo(): string | null {
 }
 
 export function InvoiceEditorPage() {
+  const { t } = useLanguage();
+
   // INIT from localStorage (no effect, no red)
   const [invoice, setInvoice] = useState<InvoiceDraft>(() =>
     loadInitialDraft()
@@ -349,34 +353,34 @@ export function InvoiceEditorPage() {
       {/* FORM SIDE */}
       <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-xs">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Invoice editor</h2>
+          <h2 className="text-sm font-semibold">{t("invoiceEditorTitle")}</h2>
           <div className="flex gap-2 text-[11px]">
             <button
               type="button"
               className="rounded-lg border border-slate-700 px-3 py-1 text-slate-300 hover:border-sky-500"
             >
-              Draft auto-saved
+              {t("invoiceDraftStatus")}
             </button>
             <button
               type="button"
               onClick={saveToHistory}
               className="rounded-lg border border-slate-700 px-3 py-1 text-slate-300 hover:border-sky-500"
             >
-              Save to history
+              {t("invoiceSaveHistory")}
             </button>
             <button
               type="button"
               className="rounded-lg border border-slate-700 px-3 py-1 text-slate-300 hover:border-sky-500"
               onClick={resetToBlank}
             >
-              New blank
+              {t("invoiceNewBlank")}
             </button>
             <button
               type="button"
               onClick={handleDownloadPdf}
               className="rounded-lg bg-sky-500 px-3 py-1 font-medium text-slate-950 hover:bg-sky-400"
             >
-              Download PDF
+              {t("invoiceDownloadPdf")}
             </button>
           </div>
         </div>
@@ -388,13 +392,13 @@ export function InvoiceEditorPage() {
               htmlFor="from-block"
               className="mb-1 block text-[11px] text-slate-300"
             >
-              From (your business)
+              {t("invoiceFromLabel")}
             </label>
             <textarea
               id="from-block"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs"
               rows={3}
-              placeholder={`Your Name\nYour business name\nAddress\nEmail\nTax ID`}
+              placeholder={t("invoiceFromPlaceholder")}
               value={invoice.from}
               onChange={onFieldChange("from")}
             />
@@ -404,13 +408,13 @@ export function InvoiceEditorPage() {
               htmlFor="to-block"
               className="mb-1 block text-[11px] text-slate-300"
             >
-              Bill to (client)
+              {t("invoiceToLabel")}
             </label>
             <textarea
               id="to-block"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs"
               rows={3}
-              placeholder={`Client name\nCompany\nAddress\nEmail`}
+              placeholder={t("invoiceToPlaceholder")}
               value={invoice.to}
               onChange={onFieldChange("to")}
             />
@@ -424,7 +428,7 @@ export function InvoiceEditorPage() {
               htmlFor="invoice-number"
               className="mb-1 block text-[11px] text-slate-300"
             >
-              Invoice #
+              {t("invoiceNumberLabel")}
             </label>
             <input
               id="invoice-number"
@@ -439,7 +443,7 @@ export function InvoiceEditorPage() {
               htmlFor="issue-date"
               className="mb-1 block text-[11px] text-slate-300"
             >
-              Issue date
+              {t("invoiceIssueDateLabel")}
             </label>
             <input
               id="issue-date"
@@ -454,7 +458,7 @@ export function InvoiceEditorPage() {
               htmlFor="due-date"
               className="mb-1 block text-[11px] text-slate-300"
             >
-              Due date
+              {t("invoiceDueDateLabel")}
             </label>
             <input
               id="due-date"
@@ -469,7 +473,7 @@ export function InvoiceEditorPage() {
               htmlFor="currency"
               className="mb-1 block text-[11px] text-slate-300"
             >
-              Currency
+              {t("invoiceCurrencyLabel")}
             </label>
             <select
               id="currency"
@@ -487,7 +491,7 @@ export function InvoiceEditorPage() {
         {/* LINE ITEMS */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-[11px] text-slate-400">
-            <span>Line items</span>
+            <span>{t("invoiceLineItemsTitle")}</span>
             <button
               type="button"
               className="text-sky-300 hover:underline"
@@ -499,10 +503,10 @@ export function InvoiceEditorPage() {
 
           {/* Column labels */}
           <div className="grid grid-cols-[2fr_repeat(3,minmax(0,1fr))] gap-2 text-[11px] text-slate-400">
-            <span>Description</span>
-            <span className="text-right">Qty</span>
-            <span className="text-right">Unit price</span>
-            <span className="text-right">Total</span>
+            <span>{t("invoiceDescriptionHeader")}</span>
+            <span className="text-right">{t("invoiceQtyHeader")}</span>
+            <span className="text-right">{t("invoiceUnitPriceHeader")}</span>
+            <span className="text-right">{t("invoiceLineTotalHeader")}</span>
           </div>
 
           {/* ROWS */}
@@ -525,7 +529,7 @@ export function InvoiceEditorPage() {
                     </label>
                     <input
                       id={descId}
-                      placeholder="Description"
+                      placeholder={t("invoiceDescriptionHeader")}
                       className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs"
                       value={item.description}
                       onChange={updateItem(item.id, "description")}
@@ -588,13 +592,13 @@ export function InvoiceEditorPage() {
               htmlFor="notes"
               className="mb-1 block text-[11px] text-slate-300"
             >
-              Notes
+              {t("invoiceNotesLabel")}
             </label>
             <textarea
               id="notes"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs"
               rows={3}
-              placeholder="Payment terms, bank details, thank you message..."
+              placeholder={t("invoiceNotesPlaceholder")}
               value={invoice.notes}
               onChange={onFieldChange("notes")}
             />
@@ -605,7 +609,7 @@ export function InvoiceEditorPage() {
                 htmlFor="tax-rate"
                 className="mb-1 block text-[11px] text-slate-300"
               >
-                Tax rate (%)
+                {t("invoiceTaxRateLabel")}
               </label>
               <input
                 id="tax-rate"
@@ -619,16 +623,18 @@ export function InvoiceEditorPage() {
             </div>
             <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 text-[11px]">
               <div className="flex justify-between">
-                <span className="text-slate-400">Subtotal</span>
+                <span className="text-slate-400">
+                  {t("invoiceSubtotalLabel")}
+                </span>
                 <span>{formatMoney(subtotal)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Tax</span>
+                <span className="text-slate-400">{t("invoiceTaxLabel")}</span>
                 <span>{formatMoney(taxAmount)}</span>
               </div>
               <div className="mt-1 h-px bg-slate-800" />
               <div className="mt-1 flex justify-between text-xs">
-                <span className="text-slate-300">Total</span>
+                <span className="text-slate-300">{t("invoiceTotalLabel")}</span>
                 <span className="font-semibold text-sky-400">
                   {formatMoney(total)}
                 </span>
@@ -640,7 +646,9 @@ export function InvoiceEditorPage() {
 
       {/* PREVIEW SIDE */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-xs">
-        <p className="mb-2 text-[11px] text-slate-400">Preview</p>
+        <p className="mb-2 text-[11px] text-slate-400">
+          {t("invoicePreviewTitle")}
+        </p>
         <div
           ref={previewRef}
           className="h-[calc(100vh-220px)] overflow-auto rounded-xl bg-white p-6 text-slate-900"
@@ -656,28 +664,37 @@ export function InvoiceEditorPage() {
                 />
               )}
               <div>
-                <p className="text-xs font-semibold">Invoice</p>
+                <p className="text-xs font-semibold">
+                  {t("invoiceHeaderTitle")}
+                </p>
                 <p className="text-[11px] text-slate-500">
                   #{invoice.invoiceNumber || "—"}
                 </p>
               </div>
             </div>
             <div className="text-right text-[11px] text-slate-600">
-              <p>Issue: {invoice.issueDate || ""}</p>
-              <p>Due: {invoice.dueDate || ""}</p>
-              <p className="mt-1 font-semibold">Total: {formatMoney(total)}</p>
+              <p>
+                {t("invoiceHeaderIssue")}: {invoice.issueDate || "—"}
+              </p>
+              <p>
+                {t("invoiceHeaderDue")}: {invoice.dueDate || "—"}
+              </p>
+              <p className="mt-1 font-semibold">
+                {t("invoiceHeaderTotal")}: {formatMoney(total)}
+              </p>
             </div>
           </div>
 
           {/* BODY SUMMARY */}
           <p className="mt-4 text-[11px] text-slate-600">
-            Subtotal: {formatMoney(subtotal)} • Tax: {formatMoney(taxAmount)} •{" "}
-            Total: <span className="font-semibold">{formatMoney(total)}</span>
+            {t("invoiceSubtotalLabel")}: {formatMoney(subtotal)} •{" "}
+            {t("invoiceTaxLabel")}: {formatMoney(taxAmount)} •{" "}
+            {t("invoiceTotalLabel")}:{" "}
+            <span className="font-semibold">{formatMoney(total)}</span>
           </p>
 
           <p className="mt-4 text-[11px] text-slate-500">
-            Your draft is saved automatically in your browser. You can close
-            this tab and come back later without losing your invoice.
+            {t("invoicePreviewSavedHint")}
           </p>
         </div>
       </div>
