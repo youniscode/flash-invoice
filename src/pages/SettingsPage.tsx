@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ChangeEvent } from "react";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const SETTINGS_KEY = "fi-settings-v1";
 
@@ -18,6 +19,8 @@ const defaultSettings: Settings = {
 };
 
 export function SettingsPage() {
+  const { t } = useLanguage();
+
   const [settings, setSettings] = useState<Settings>(() => {
     if (typeof window === "undefined") return defaultSettings;
     try {
@@ -86,9 +89,11 @@ export function SettingsPage() {
     <div className="w-full rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-xs">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-slate-100">Settings</h2>
+          <h2 className="text-sm font-semibold text-slate-100">
+            {t("settingsTitle")}
+          </h2>
           <p className="mt-1 text-[11px] text-slate-400">
-            Configure your business info and default invoice settings.
+            {t("settingsSubtitle")}
           </p>
         </div>
       </div>
@@ -101,18 +106,18 @@ export function SettingsPage() {
               htmlFor="business-info"
               className="mb-1 block text-[11px] text-slate-300"
             >
-              Business block (used in &quot;From&quot; field)
+              {t("settingsBusinessInfoLabel")}
             </label>
             <textarea
               id="business-info"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs"
               rows={5}
-              placeholder={`Your Name\nYour business name\nAddress\nEmail\nTax ID`}
+              placeholder={t("invoiceFromPlaceholder")}
               value={settings.businessInfo}
               onChange={handleBusinessChange}
             />
             <p className="mt-1 text-[11px] text-slate-500">
-              This will auto-fill the &quot;From&quot; section in new invoices.
+              {t("settingsBusinessInfoHelper")}
             </p>
           </div>
 
@@ -122,7 +127,7 @@ export function SettingsPage() {
                 htmlFor="default-tax"
                 className="mb-1 block text-[11px] text-slate-300"
               >
-                Default tax rate (%)
+                {t("settingsDefaultTaxLabel")}
               </label>
               <input
                 id="default-tax"
@@ -138,7 +143,7 @@ export function SettingsPage() {
                 htmlFor="default-currency"
                 className="mb-1 block text-[11px] text-slate-300"
               >
-                Default currency
+                {t("settingsDefaultCurrencyLabel")}
               </label>
               <select
                 id="default-currency"
@@ -157,10 +162,10 @@ export function SettingsPage() {
         {/* Logo */}
         <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <p className="text-[11px] font-semibold text-slate-200">
-            Logo (optional)
+            {t("settingsLogoTitle")}
           </p>
           <p className="text-[11px] text-slate-500">
-            Upload a logo to use in your invoice header later.
+            {t("settingsLogoHelper")}
           </p>
 
           <div className="flex flex-col gap-2">
@@ -178,14 +183,14 @@ export function SettingsPage() {
               <div className="mt-2 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-slate-400">
-                    Current logo preview
+                    {t("settingsLogoCurrent")}
                   </span>
                   <button
                     type="button"
                     onClick={clearLogo}
                     className="text-[11px] text-red-400 hover:underline"
                   >
-                    Remove
+                    {t("settingsLogoRemove")}
                   </button>
                 </div>
                 <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900 p-2">
@@ -200,7 +205,7 @@ export function SettingsPage() {
           </div>
 
           <p className="mt-2 text-[11px] text-slate-500">
-            Settings are stored locally in your browser.
+            {t("settingsStoredLocally")}
           </p>
         </div>
       </div>

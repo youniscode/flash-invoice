@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export function LandingPage() {
+  const { t, lang, toggleLanguage } = useLanguage();
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* NAVBAR */}
@@ -17,11 +20,18 @@ export function LandingPage() {
               to="/app"
               className="inline-flex items-center justify-center rounded-full bg-sky-500 px-4 py-2 text-xs font-semibold text-slate-950 shadow-sm shadow-sky-500/40 hover:bg-sky-400"
             >
-              Open App
+              {t("landingHeaderCtaPrimary")}
             </Link>
 
             <button className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-medium text-slate-950 hover:bg-sky-400">
-              Buy Lifetime Access
+              {t("landingHeaderCtaSecondary")}
+            </button>
+
+            <button
+              onClick={toggleLanguage}
+              className="rounded-full border border-slate-700 px-3 py-1 text-[11px] text-slate-300 hover:border-sky-500 hover:text-sky-300"
+            >
+              {lang === "en" ? "FR" : "EN"}
             </button>
           </div>
         </div>
@@ -34,24 +44,21 @@ export function LandingPage() {
           {/* Left side */}
           <div className="space-y-6">
             <h1 className="text-3xl font-semibold leading-tight md:text-4xl">
-              Create invoices & quotes
-              <span className="text-sky-400"> in 10 seconds.</span>
+              {t("landingHeroTitle")}
             </h1>
-            <p className="text-sm text-slate-300">
-              A minimal web app for freelancers who want clean, professional
-              PDFs without complex accounting software.
-            </p>
+            <p className="text-sm text-slate-300">{t("landingHeroSubtitle")}</p>
             <div className="flex flex-wrap gap-3 text-sm">
-              <button className="rounded-lg bg-sky-500 px-4 py-2 font-medium text-slate-950 hover:bg-sky-400">
-                Try the app
-              </button>
+              <Link
+                to="/app"
+                className="rounded-lg bg-sky-500 px-4 py-2 font-medium text-slate-950 hover:bg-sky-400"
+              >
+                {t("landingHeroCtaPrimary")}
+              </Link>
               <button className="rounded-lg border border-slate-700 px-4 py-2 font-medium text-slate-100 hover:border-slate-500">
-                Watch 30s demo
+                {t("landingHeroCtaSecondary")}
               </button>
             </div>
-            <p className="text-xs text-slate-400">
-              No signup required for the demo. PDFs stay in your browser.
-            </p>
+            <p className="text-xs text-slate-400">{t("landingHeroBadge")}</p>
           </div>
 
           {/* Right side: preview card */}
@@ -101,16 +108,16 @@ export function LandingPage() {
         <section className="mt-16 grid gap-4 md:grid-cols-3">
           {[
             {
-              title: "Super fast",
-              body: "Reuse your info and generate new invoices in seconds.",
+              title: t("landingFeatureSpeedTitle"),
+              body: t("landingFeatureSpeedBody"),
             },
             {
-              title: "Simple",
-              body: "No accounts, no complex dashboard. Just docs.",
+              title: t("landingFeatureLocalTitle"),
+              body: t("landingFeatureLocalBody"),
             },
             {
-              title: "Professional PDFs",
-              body: "Clean layout that makes you look premium to clients.",
+              title: t("landingFeatureFreeTitle"),
+              body: t("landingFeatureFreeBody"),
             },
           ].map((card) => (
             <div
@@ -118,7 +125,7 @@ export function LandingPage() {
               className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm"
             >
               <h3 className="mb-1 text-sm font-semibold">{card.title}</h3>
-              <p className="text-slate-400 text-xs">{card.body}</p>
+              <p className="text-xs text-slate-400">{card.body}</p>
             </div>
           ))}
         </section>
@@ -126,7 +133,7 @@ export function LandingPage() {
 
       {/* FOOTER */}
       <footer className="mt-16 border-t border-slate-800 py-6 text-center text-[11px] text-slate-500">
-        FlashInvoice — made for freelancers.
+        {t("landingFooter")}
       </footer>
     </div>
   );

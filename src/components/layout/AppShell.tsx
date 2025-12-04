@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useTheme } from "../../theme/useTheme";
-import { useLanguage } from "../../i18n/useLanguage";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 export function AppShell() {
   const { lang, toggleLanguage, t } = useLanguage();

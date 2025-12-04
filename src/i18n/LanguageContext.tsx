@@ -69,6 +69,45 @@ const translations = {
     historyOpen: "Open",
     historyDuplicate: "Duplicate",
     historyDelete: "Delete",
+
+    // Settings
+    settingsTitle: "Settings",
+    settingsSubtitle:
+      "Configure your business info, defaults, and logo for new invoices.",
+    settingsBusinessInfoLabel: 'Business block (used in "From" field)',
+    settingsBusinessInfoHelper:
+      'This will auto-fill the "From" section in new invoices.',
+    settingsDefaultTaxLabel: "Default tax rate (%)",
+    settingsDefaultCurrencyLabel: "Default currency",
+    settingsLogoTitle: "Logo (optional)",
+    settingsLogoHelper: "Upload a logo to use in your invoice header later.",
+    settingsLogoCurrent: "Current logo preview",
+    settingsLogoRemove: "Remove",
+    settingsStoredLocally: "Settings are stored locally in your browser.",
+
+    // Landing page / marketing
+    landingHeroTitle: "Create invoices & quotes in 10 seconds.",
+    landingHeroSubtitle:
+      "A minimal web app for freelancers who want clean, professional PDFs without complex accounting software.",
+    landingHeroCtaPrimary: "Open the app",
+    landingHeroCtaSecondary: "Watch 30s demo",
+    landingHeroBadge:
+      "No signup required for the demo. PDFs stay in your browser.",
+
+    landingHeaderCtaPrimary: "Open App",
+    landingHeaderCtaSecondary: "Buy Lifetime Access",
+
+    landingFeatureSpeedTitle: "Super fast",
+    landingFeatureSpeedBody:
+      "Reuse your info and generate new invoices in seconds.",
+    landingFeatureLocalTitle: "Simple",
+    landingFeatureLocalBody:
+      "No accounts, no complex dashboard. Just documents.",
+    landingFeatureFreeTitle: "Professional PDFs",
+    landingFeatureFreeBody:
+      "Clean layout that makes you look premium to clients.",
+
+    landingFooter: "FlashInvoice made for freelancers.",
   },
   fr: {
     // Global / nav
@@ -136,6 +175,48 @@ const translations = {
     historyOpen: "Ouvrir",
     historyDuplicate: "Dupliquer",
     historyDelete: "Supprimer",
+
+    // Settings
+    settingsTitle: "Paramètres",
+    settingsSubtitle:
+      "Configure tes informations d’entreprise, les valeurs par défaut et ton logo pour les nouvelles factures.",
+    settingsBusinessInfoLabel:
+      "Bloc entreprise (utilisé dans le champ « Émetteur »)",
+    settingsBusinessInfoHelper:
+      "Ce texte remplira automatiquement la section « Émetteur » des nouvelles factures.",
+    settingsDefaultTaxLabel: "Taux de TVA par défaut (%)",
+    settingsDefaultCurrencyLabel: "Devise par défaut",
+    settingsLogoTitle: "Logo (optionnel)",
+    settingsLogoHelper:
+      "Ajoute un logo pour l’afficher dans l’en-tête de tes factures.",
+    settingsLogoCurrent: "Aperçu du logo actuel",
+    settingsLogoRemove: "Supprimer",
+    settingsStoredLocally:
+      "Les paramètres sont stockés localement dans ton navigateur.",
+
+    // Landing page / marketing
+    landingHeroTitle: "Crée des factures et devis en 10 secondes.",
+    landingHeroSubtitle:
+      "Une web app minimaliste pour les freelances qui veulent des PDF propres et pros, sans logiciel comptable compliqué.",
+    landingHeroCtaPrimary: "Ouvrir l’application",
+    landingHeroCtaSecondary: "Voir la démo de 30s",
+    landingHeroBadge:
+      "Aucune inscription nécessaire pour la démo. Les PDF restent dans ton navigateur.",
+
+    landingHeaderCtaPrimary: "Ouvrir l’app",
+    landingHeaderCtaSecondary: "Acheter l’accès à vie",
+
+    landingFeatureSpeedTitle: "Ultra rapide",
+    landingFeatureSpeedBody:
+      "Réutilise tes infos et génère de nouvelles factures en quelques secondes.",
+    landingFeatureLocalTitle: "Simple",
+    landingFeatureLocalBody:
+      "Pas de compte, pas de tableau de bord compliqué. Juste des documents.",
+    landingFeatureFreeTitle: "PDF professionnels",
+    landingFeatureFreeBody:
+      "Une mise en page propre qui te fait paraître premium aux yeux des clients.",
+
+    landingFooter: "FlashInvoice créé pour les freelances.",
   },
 };
 
