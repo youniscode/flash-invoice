@@ -4,6 +4,7 @@ import { useLanguage } from "../i18n/LanguageContext";
 
 const INVOICES_KEY = "fi-invoices-v1";
 const SELECTED_INVOICE_KEY = "fi-selected-invoice-id";
+const SELECTED_INVOICE_CONVERT_KEY = "fi-selected-invoice-convert-to";
 
 type HistoryItem = {
   id: string;
@@ -12,7 +13,7 @@ type HistoryItem = {
   invoiceNumber: string;
   total: number;
   currency: string;
-  type: "invoice" | "quote";
+  type?: "invoice" | "quote";
 };
 
 type SavedInvoiceMetaRaw = {
@@ -25,14 +26,9 @@ type SavedInvoiceMetaRaw = {
   type?: "invoice" | "quote"; // may be missing for older records
 };
 
-type SavedInvoiceData = {
-  docType?: "invoice" | "quote";
-  [key: string]: unknown;
-};
-
 type SavedInvoiceRecord = {
   meta: SavedInvoiceMetaRaw;
-  data?: SavedInvoiceData;
+  // data exists in storage but we don't need it for the table here
 };
 
 function mapRecordsToItems(records: SavedInvoiceRecord[]): HistoryItem[] {
@@ -135,47 +131,13 @@ export function HistoryPage() {
   const convertToInvoice = (id: string) => {
     if (typeof window === "undefined") return;
 
-    try {
-      const raw = window.localStorage.getItem(INVOICES_KEY);
-      if (!raw) return;
+    // We don't duplicate here. We just tell the editor:
+    // - which record to open
+    // - that this is a "convert to invoice" action
+    window.localStorage.setItem(SELECTED_INVOICE_KEY, id);
+    window.localStorage.setItem(SELECTED_INVOICE_CONVERT_KEY, "invoice");
 
-      const records = JSON.parse(raw) as SavedInvoiceRecord[];
-      const original = records.find((r) => r.meta.id === id);
-      if (!original) return;
-
-      const now = new Date().toISOString();
-      const newId = Math.random().toString(36).slice(2);
-
-      const newMeta: SavedInvoiceMetaRaw = {
-        ...original.meta,
-        id: newId,
-        createdAt: now,
-        type: "invoice",
-        invoiceNumber: original.meta.invoiceNumber.includes("(copy)")
-          ? original.meta.invoiceNumber
-          : `${original.meta.invoiceNumber} (copy)`,
-      };
-
-      const newData: SavedInvoiceData = {
-        ...(original.data ?? {}),
-        docType: "invoice",
-      };
-
-      const duplicated: SavedInvoiceRecord = {
-        meta: newMeta,
-        data: newData,
-      };
-
-      const updatedRecords = [...records, duplicated];
-      window.localStorage.setItem(INVOICES_KEY, JSON.stringify(updatedRecords));
-
-      // Automatically open the converted invoice in the editor
-      window.localStorage.setItem(SELECTED_INVOICE_KEY, newId);
-      setItems(mapRecordsToItems(updatedRecords));
-      navigate("/app/new-invoice");
-    } catch {
-      // ignore for now
-    }
+    navigate("/app/new-invoice");
   };
 
   const formatDate = (iso: string) => {
@@ -263,7 +225,7 @@ export function HistoryPage() {
                         : "bg-emerald-500/10 text-emerald-400")
                     }
                   >
-                    {typeLabel(inv.type)}
+                    {typeLabel(inv.type ?? "invoice")}
                   </span>
                 </td>
                 <td className="py-2 pr-4 text-right">

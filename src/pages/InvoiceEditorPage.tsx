@@ -31,6 +31,41 @@ const DRAFT_KEY = "fi-invoice-draft-v1";
 const INVOICES_KEY = "fi-invoices-v1";
 const SELECTED_INVOICE_KEY = "fi-selected-invoice-id";
 
+const SELECTED_INVOICE_CONVERT_KEY = "fi-selected-invoice-convert-to";
+
+function getNextNumberForType(type: InvoiceType): string {
+  if (typeof window === "undefined") {
+    return type === "invoice" ? "INV-0001" : "Q-0001";
+  }
+
+  try {
+    const raw = window.localStorage.getItem(INVOICES_KEY);
+    if (!raw) {
+      return type === "invoice" ? "INV-0001" : "Q-0001";
+    }
+
+    const records = JSON.parse(raw) as SavedInvoiceRecord[];
+    const prefix = type === "invoice" ? "INV-" : "Q-";
+
+    let max = 0;
+    for (const rec of records) {
+      if (rec.meta.type !== type) continue;
+      const numStr = rec.meta.invoiceNumber || "";
+      if (!numStr.startsWith(prefix)) continue;
+
+      const n = parseInt(numStr.slice(prefix.length), 10);
+      if (!Number.isNaN(n) && n > max) {
+        max = n;
+      }
+    }
+
+    const next = max + 1;
+    return `${prefix}${String(next).padStart(4, "0")}`;
+  } catch {
+    return type === "invoice" ? "INV-0001" : "Q-0001";
+  }
+}
+
 type SavedInvoiceMeta = {
   id: string;
   createdAt: string;
@@ -147,11 +182,16 @@ function loadInitialDraft(): InvoiceDraft {
   try {
     const settingsDefaults = getSettingsDefaults();
 
-    // 1) If coming from history "Open"
+    // 1) If coming from history "Open" (or "Convert to invoice")
     const selectedId = window.localStorage.getItem(SELECTED_INVOICE_KEY);
+    const convertTo = window.localStorage.getItem(SELECTED_INVOICE_CONVERT_KEY);
+
     if (selectedId) {
-      // one-shot behavior: clear selection
+      // one-shot behavior: clear selection + convert flag
       window.localStorage.removeItem(SELECTED_INVOICE_KEY);
+      if (convertTo) {
+        window.localStorage.removeItem(SELECTED_INVOICE_CONVERT_KEY);
+      }
 
       const rawInvoices = window.localStorage.getItem(INVOICES_KEY);
       if (rawInvoices) {
@@ -161,11 +201,28 @@ function loadInitialDraft(): InvoiceDraft {
         if (match) {
           const parsed = match.data as Partial<InvoiceDraft>;
 
+          // base values from stored doc
+          let docType: InvoiceType =
+            parsed.docType === "quote" || parsed.docType === "invoice"
+              ? parsed.docType
+              : "invoice";
+
+          let invoiceNumber =
+            parsed.invoiceNumber ?? defaultDraft.invoiceNumber;
+
+          // If we are explicitly converting to an invoice from history,
+          // force type = invoice and give it the next invoice number.
+          if (convertTo === "invoice") {
+            docType = "invoice";
+            invoiceNumber = getNextNumberForType("invoice");
+          }
+
           return {
             ...defaultDraft,
             ...settingsDefaults,
             ...parsed,
-            docType: parsed.docType === "quote" ? "quote" : "invoice",
+            docType,
+            invoiceNumber,
             items: (parsed.items ?? defaultDraft.items).map((item) => ({
               ...createLine(),
               ...item,
