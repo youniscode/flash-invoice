@@ -12,14 +12,39 @@ type HistoryItem = {
   invoiceNumber: string;
   total: number;
   currency: string;
+  type: "invoice" | "quote";
+};
+
+type SavedInvoiceMetaRaw = {
+  id: string;
+  createdAt: string;
+  clientName: string;
+  invoiceNumber: string;
+  total: number;
+  currency: string;
+  type?: "invoice" | "quote"; // may be missing for older records
+};
+
+type SavedInvoiceData = {
+  docType?: "invoice" | "quote";
+  [key: string]: unknown;
 };
 
 type SavedInvoiceRecord = {
-  meta: HistoryItem;
+  meta: SavedInvoiceMetaRaw;
+  data?: SavedInvoiceData;
 };
 
 function mapRecordsToItems(records: SavedInvoiceRecord[]): HistoryItem[] {
-  const mapped = records.map((r) => r.meta);
+  const mapped: HistoryItem[] = records.map((r) => ({
+    id: r.meta.id,
+    createdAt: r.meta.createdAt,
+    clientName: r.meta.clientName,
+    invoiceNumber: r.meta.invoiceNumber,
+    total: r.meta.total,
+    currency: r.meta.currency,
+    type: r.meta.type ?? "invoice",
+  }));
 
   // newest first
   mapped.sort(
@@ -44,7 +69,7 @@ function loadHistoryItems(): HistoryItem[] {
 }
 
 export function HistoryPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [items, setItems] = useState<HistoryItem[]>(() => loadHistoryItems());
   const navigate = useNavigate();
 
@@ -76,6 +101,7 @@ export function HistoryPage() {
           id: newId,
           createdAt: now,
           invoiceNumber: original.meta.invoiceNumber + " (copy)",
+          type: original.meta.type ?? "invoice",
         },
       };
 
@@ -106,6 +132,52 @@ export function HistoryPage() {
     }
   };
 
+  const convertToInvoice = (id: string) => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const raw = window.localStorage.getItem(INVOICES_KEY);
+      if (!raw) return;
+
+      const records = JSON.parse(raw) as SavedInvoiceRecord[];
+      const original = records.find((r) => r.meta.id === id);
+      if (!original) return;
+
+      const now = new Date().toISOString();
+      const newId = Math.random().toString(36).slice(2);
+
+      const newMeta: SavedInvoiceMetaRaw = {
+        ...original.meta,
+        id: newId,
+        createdAt: now,
+        type: "invoice",
+        invoiceNumber: original.meta.invoiceNumber.includes("(copy)")
+          ? original.meta.invoiceNumber
+          : `${original.meta.invoiceNumber} (copy)`,
+      };
+
+      const newData: SavedInvoiceData = {
+        ...(original.data ?? {}),
+        docType: "invoice",
+      };
+
+      const duplicated: SavedInvoiceRecord = {
+        meta: newMeta,
+        data: newData,
+      };
+
+      const updatedRecords = [...records, duplicated];
+      window.localStorage.setItem(INVOICES_KEY, JSON.stringify(updatedRecords));
+
+      // Automatically open the converted invoice in the editor
+      window.localStorage.setItem(SELECTED_INVOICE_KEY, newId);
+      setItems(mapRecordsToItems(updatedRecords));
+      navigate("/app/new-invoice");
+    } catch {
+      // ignore for now
+    }
+  };
+
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "";
@@ -123,6 +195,16 @@ export function HistoryPage() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
+
+  const typeLabel = (type: "invoice" | "quote") => {
+    if (type === "quote") {
+      return lang === "fr" ? "Devis" : "Quote";
+    }
+    return lang === "fr" ? "Facture" : "Invoice";
+  };
+
+  const convertButtonLabel =
+    lang === "fr" ? "Convertir → Facture" : "Convert → Invoice";
 
   if (!items.length) {
     return (
@@ -151,6 +233,7 @@ export function HistoryPage() {
               <th className="py-2 pr-4">{t("historyDateHeader")}</th>
               <th className="py-2 pr-4">{t("historyInvoiceHeader")}</th>
               <th className="py-2 pr-4">{t("historyClientHeader")}</th>
+              <th className="py-2 pr-4">{lang === "fr" ? "Type" : "Type"}</th>
               <th className="py-2 pr-4 text-right">
                 {t("historyTotalHeader")}
               </th>
@@ -171,10 +254,22 @@ export function HistoryPage() {
                 </td>
                 <td className="py-2 pr-4">{inv.invoiceNumber}</td>
                 <td className="py-2 pr-4">{inv.clientName}</td>
+                <td className="py-2 pr-4">
+                  <span
+                    className={
+                      "inline-flex rounded-full px-2 py-0.5 text-[10px] " +
+                      (inv.type === "quote"
+                        ? "bg-amber-500/10 text-amber-400"
+                        : "bg-emerald-500/10 text-emerald-400")
+                    }
+                  >
+                    {typeLabel(inv.type)}
+                  </span>
+                </td>
                 <td className="py-2 pr-4 text-right">
                   {formatMoney(inv.total, inv.currency)}
                 </td>
-                <td className="py-2 pr-0 text-right space-x-2">
+                <td className="space-x-2 py-2 pr-0 text-right">
                   <button
                     type="button"
                     onClick={() => openInvoice(inv.id)}
@@ -189,6 +284,15 @@ export function HistoryPage() {
                   >
                     {t("historyDuplicate")}
                   </button>
+                  {inv.type === "quote" && (
+                    <button
+                      type="button"
+                      onClick={() => convertToInvoice(inv.id)}
+                      className="rounded-lg border border-sky-700 px-3 py-1 text-[11px] text-sky-300 hover:border-sky-500 hover:text-sky-200"
+                    >
+                      {convertButtonLabel}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => deleteInvoice(inv.id)}

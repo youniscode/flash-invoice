@@ -5,6 +5,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { useLanguage } from "../i18n/useLanguage";
 
+type InvoiceType = "invoice" | "quote";
 
 type LineItem = {
   id: string;
@@ -14,6 +15,7 @@ type LineItem = {
 };
 
 type InvoiceDraft = {
+  docType: InvoiceType;
   from: string;
   to: string;
   invoiceNumber: string;
@@ -36,6 +38,7 @@ type SavedInvoiceMeta = {
   invoiceNumber: string;
   total: number;
   currency: string;
+  type: InvoiceType; // "invoice" | "quote"
 };
 
 type SavedInvoiceRecord = {
@@ -53,6 +56,7 @@ function createLine(partial?: Partial<LineItem>): LineItem {
 }
 
 const defaultDraft: InvoiceDraft = {
+  docType: "invoice",
   from: "",
   to: "",
   invoiceNumber: "INV-0001",
@@ -123,12 +127,13 @@ function loadInitialDraft(): InvoiceDraft {
         const match = records.find((r) => r.meta.id === selectedId);
 
         if (match) {
-          const parsed = match.data;
+          const parsed = match.data as Partial<InvoiceDraft>;
 
           return {
             ...defaultDraft,
             ...settingsDefaults,
             ...parsed,
+            docType: parsed.docType === "quote" ? "quote" : "invoice",
             items: (parsed.items ?? defaultDraft.items).map((item) => ({
               ...createLine(),
               ...item,
@@ -160,6 +165,7 @@ function loadInitialDraft(): InvoiceDraft {
       ...defaultDraft,
       ...settingsDefaults,
       ...parsed,
+      docType: parsed.docType === "quote" ? "quote" : "invoice",
       items: (parsed.items ?? defaultDraft.items).map((item) => ({
         ...createLine(),
         ...item,
@@ -195,7 +201,7 @@ function loadInitialLogo(): string | null {
 }
 
 export function InvoiceEditorPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   // INIT from localStorage (no effect, no red)
   const [invoice, setInvoice] = useState<InvoiceDraft>(() =>
@@ -203,6 +209,8 @@ export function InvoiceEditorPage() {
   );
   const [logoUrl] = useState<string | null>(() => loadInitialLogo());
   const previewRef = useRef<HTMLDivElement | null>(null);
+
+  const isQuote = invoice.docType === "quote";
 
   // SAVE draft whenever invoice changes
   useEffect(() => {
@@ -314,6 +322,7 @@ export function InvoiceEditorPage() {
         invoiceNumber: invoice.invoiceNumber || "INV-0001",
         total,
         currency: invoice.currency || "EUR",
+        type: invoice.docType,
       },
       data: invoice,
     };
@@ -348,12 +357,54 @@ export function InvoiceEditorPage() {
       maximumFractionDigits: 2,
     })}`;
 
+  const docTypeLabel =
+    invoice.docType === "quote"
+      ? lang === "fr"
+        ? "Devis"
+        : "Quote"
+      : t("invoiceHeaderTitle"); // "Invoice" / "Facture"
+
+  const docTypeToggleLabelInvoice = lang === "fr" ? "Facture" : "Invoice";
+  const docTypeToggleLabelQuote = lang === "fr" ? "Devis" : "Quote";
+
   return (
     <div className="grid w-full gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
       {/* FORM SIDE */}
       <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-xs">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">{t("invoiceEditorTitle")}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">{t("invoiceEditorTitle")}</h2>
+            {/* Invoice / Quote toggle */}
+            <div className="inline-flex rounded-full border border-slate-700 bg-slate-950/60 p-0.5 text-[10px]">
+              <button
+                type="button"
+                onClick={() =>
+                  setInvoice((prev) => ({ ...prev, docType: "invoice" }))
+                }
+                className={
+                  "rounded-full px-2 py-0.5 " +
+                  (isQuote
+                    ? "text-slate-400"
+                    : "bg-sky-500 text-slate-950 shadow-sm shadow-sky-500/30")
+                }
+              >
+                {docTypeToggleLabelInvoice}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setInvoice((prev) => ({ ...prev, docType: "quote" }))
+                }
+                className={
+                  "rounded-full px-2 py-0.5 " +
+                  (isQuote ? "bg-slate-800 text-slate-100" : "text-slate-400")
+                }
+              >
+                {docTypeToggleLabelQuote}
+              </button>
+            </div>
+          </div>
+
           <div className="flex gap-2 text-[11px]">
             <button
               type="button"
@@ -664,9 +715,7 @@ export function InvoiceEditorPage() {
                 />
               )}
               <div>
-                <p className="text-xs font-semibold">
-                  {t("invoiceHeaderTitle")}
-                </p>
+                <p className="text-xs font-semibold">{docTypeLabel}</p>
                 <p className="text-[11px] text-slate-500">
                   #{invoice.invoiceNumber || "—"}
                 </p>
