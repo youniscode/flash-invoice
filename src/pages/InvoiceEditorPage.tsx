@@ -30,8 +30,6 @@ type InvoiceDraft = {
 const DRAFT_KEY = "fi-invoice-draft-v1";
 const INVOICES_KEY = "fi-invoices-v1";
 const SELECTED_INVOICE_KEY = "fi-selected-invoice-id";
-const SETTINGS_KEY = "fi-settings-v1";
-const NUMBERING_KEY = "fi-numbering-v1";
 
 type SavedInvoiceMeta = {
   id: string;
@@ -48,17 +46,37 @@ type SavedInvoiceRecord = {
   data: InvoiceDraft;
 };
 
-type SettingsData = {
-  businessInfo?: string;
-  defaultTaxRate?: number;
-  defaultCurrency?: string;
-  logoDataUrl?: string | null;
-};
+function getNextDocumentNumber(docType: InvoiceType): string {
+  if (typeof window === "undefined") {
+    return docType === "invoice" ? "INV-0001" : "QTE-0001";
+  }
 
-type NumberingState = {
-  lastInvoice: number;
-  lastQuote: number;
-};
+  const prefix = docType === "invoice" ? "INV-" : "QTE-";
+  try {
+    const raw = window.localStorage.getItem(INVOICES_KEY);
+    if (!raw) return `${prefix}0001`;
+
+    const records = JSON.parse(raw) as SavedInvoiceRecord[];
+
+    let max = 0;
+    for (const rec of records) {
+      if (rec.meta.type !== docType) continue;
+      const numStr = rec.meta.invoiceNumber || "";
+      if (!numStr.startsWith(prefix)) continue;
+
+      const suffix = numStr.slice(prefix.length);
+      const n = parseInt(suffix, 10);
+      if (!Number.isNaN(n) && n > max) {
+        max = n;
+      }
+    }
+
+    const next = max + 1;
+    return `${prefix}${next.toString().padStart(4, "0")}`;
+  } catch {
+    return `${prefix}0001`;
+  }
+}
 
 function createLine(partial?: Partial<LineItem>): LineItem {
   return {
@@ -88,62 +106,14 @@ const defaultDraft: InvoiceDraft = {
   ],
 };
 
-function loadNumberingState(): NumberingState {
-  if (typeof window === "undefined") {
-    return { lastInvoice: 0, lastQuote: 0 };
-  }
+type SettingsData = {
+  businessInfo?: string;
+  defaultTaxRate?: number;
+  defaultCurrency?: string;
+  logoDataUrl?: string | null;
+};
 
-  try {
-    const raw = window.localStorage.getItem(NUMBERING_KEY);
-    if (!raw) return { lastInvoice: 0, lastQuote: 0 };
-
-    const parsed = JSON.parse(raw) as Partial<NumberingState>;
-    return {
-      lastInvoice:
-        typeof parsed.lastInvoice === "number" ? parsed.lastInvoice : 0,
-      lastQuote: typeof parsed.lastQuote === "number" ? parsed.lastQuote : 0,
-    };
-  } catch {
-    return { lastInvoice: 0, lastQuote: 0 };
-  }
-}
-
-function saveNumberingState(state: NumberingState) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(NUMBERING_KEY, JSON.stringify(state));
-  } catch {
-    // ignore
-  }
-}
-
-function formatDocNumber(docType: InvoiceType, index: number): string {
-  const prefix = docType === "quote" ? "QUO-" : "INV-";
-  return prefix + String(index).padStart(4, "0");
-}
-
-/**
- * Generate the next document number for a given docType,
- * and persist the incremented counter in localStorage.
- */
-function getNextDocumentNumber(docType: InvoiceType): string {
-  if (typeof window === "undefined") {
-    // SSR / safety fallback
-    return formatDocNumber(docType, 1);
-  }
-
-  const current = loadNumberingState();
-  const nextIndex =
-    docType === "quote" ? current.lastQuote + 1 : current.lastInvoice + 1;
-
-  const updated: NumberingState =
-    docType === "quote"
-      ? { ...current, lastQuote: nextIndex }
-      : { ...current, lastInvoice: nextIndex };
-
-  saveNumberingState(updated);
-  return formatDocNumber(docType, nextIndex);
-}
+const SETTINGS_KEY = "fi-settings-v1";
 
 function getSettingsDefaults(): Partial<InvoiceDraft> {
   if (typeof window === "undefined") return {};
@@ -168,24 +138,6 @@ function getSettingsDefaults(): Partial<InvoiceDraft> {
     return partial;
   } catch {
     return {};
-  }
-}
-
-function loadInitialLogo(): string | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = window.localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw) as SettingsData;
-
-    if (parsed.logoDataUrl && typeof parsed.logoDataUrl === "string") {
-      return parsed.logoDataUrl;
-    }
-    return null;
-  } catch {
-    return null;
   }
 }
 
@@ -232,7 +184,7 @@ function loadInitialDraft(): InvoiceDraft {
     // 2) Fallback: load last draft
     const raw = window.localStorage.getItem(DRAFT_KEY);
     if (!raw) {
-      // no draft -> just defaults + settings + auto number
+      // no draft -> start a fresh document with an auto number
       const docType: InvoiceType = "invoice";
       const autoNumber = getNextDocumentNumber(docType);
 
@@ -267,8 +219,26 @@ function loadInitialDraft(): InvoiceDraft {
   }
 }
 
+function loadInitialLogo(): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as SettingsData;
+
+    if (parsed.logoDataUrl && typeof parsed.logoDataUrl === "string") {
+      return parsed.logoDataUrl;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function InvoiceEditorPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   // INIT from localStorage (no effect, no red)
   const [invoice, setInvoice] = useState<InvoiceDraft>(() =>
@@ -276,6 +246,8 @@ export function InvoiceEditorPage() {
   );
   const [logoUrl] = useState<string | null>(() => loadInitialLogo());
   const previewRef = useRef<HTMLDivElement | null>(null);
+
+  const isQuote = invoice.docType === "quote";
 
   // SAVE draft whenever invoice changes
   useEffect(() => {
@@ -358,11 +330,8 @@ export function InvoiceEditorPage() {
   const resetToBlank = () => {
     const settingsDefaults = getSettingsDefaults();
     setInvoice((prev) => {
-      const docType: InvoiceType = prev.docType ?? "invoice";
-      const autoNumber =
-        typeof window !== "undefined"
-          ? getNextDocumentNumber(docType)
-          : defaultDraft.invoiceNumber;
+      const docType = prev.docType || "invoice";
+      const autoNumber = getNextDocumentNumber(docType);
 
       return {
         ...defaultDraft,
@@ -432,12 +401,70 @@ export function InvoiceEditorPage() {
       maximumFractionDigits: 2,
     })}`;
 
+  const docTypeLabel =
+    invoice.docType === "quote"
+      ? lang === "fr"
+        ? "Devis"
+        : "Quote"
+      : t("invoiceHeaderTitle"); // "Invoice" / "Facture"
+
+  const docTypeToggleLabelInvoice = lang === "fr" ? "Facture" : "Invoice";
+  const docTypeToggleLabelQuote = lang === "fr" ? "Devis" : "Quote";
+
   return (
     <div className="grid w-full gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
       {/* FORM SIDE */}
       <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-xs">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">{t("invoiceEditorTitle")}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">{t("invoiceEditorTitle")}</h2>
+            {/* Invoice / Quote toggle */}
+            <div className="inline-flex rounded-full border border-slate-700 bg-slate-950/60 p-0.5 text-[10px]">
+              <button
+                type="button"
+                onClick={() =>
+                  setInvoice((prev) => {
+                    if (prev.docType === "invoice") return prev;
+                    const autoNumber = getNextDocumentNumber("invoice");
+                    return {
+                      ...prev,
+                      docType: "invoice",
+                      invoiceNumber: autoNumber,
+                    };
+                  })
+                }
+                className={
+                  "rounded-full px-2 py-0.5 " +
+                  (isQuote
+                    ? "text-slate-400"
+                    : "bg-sky-500 text-slate-950 shadow-sm shadow-sky-500/30")
+                }
+              >
+                {docTypeToggleLabelInvoice}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setInvoice((prev) => {
+                    if (prev.docType === "quote") return prev;
+                    const autoNumber = getNextDocumentNumber("quote");
+                    return {
+                      ...prev,
+                      docType: "quote",
+                      invoiceNumber: autoNumber,
+                    };
+                  })
+                }
+                className={
+                  "rounded-full px-2 py-0.5 " +
+                  (isQuote ? "bg-slate-800 text-slate-100" : "text-slate-400")
+                }
+              >
+                {docTypeToggleLabelQuote}
+              </button>
+            </div>
+          </div>
+
           <div className="flex gap-2 text-[11px]">
             <button
               type="button"
@@ -748,9 +775,7 @@ export function InvoiceEditorPage() {
                 />
               )}
               <div>
-                <p className="text-xs font-semibold">
-                  {t("invoiceHeaderTitle")}
-                </p>
+                <p className="text-xs font-semibold">{docTypeLabel}</p>
                 <p className="text-[11px] text-slate-500">
                   #{invoice.invoiceNumber || "—"}
                 </p>
